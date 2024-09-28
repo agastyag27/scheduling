@@ -1,0 +1,17 @@
+Friedland		Alg_2 AP_Calc_AB 
+Silverbush		Alg_2/Trig_A Alg_1 
+Saxena			Precalc 
+Hlasek			Analysis_H Geom 
+Redfield		Alg2/Trig_H AP_Calc_BC 
+Siu				Alg2/Trig_H Geom_H 
+Bautista		STATS_AP FOOP 
+McDonnell		IAC AP_CSP 
+Congress		STATS_AP IAC 
+Kaneko			FOOP Princ_of_Business 
+Yun				Alg2/Trig_H Geom_H 
+Limburg			AP_Calc_AB IAC 
+Tantod			Applied_Math_H BEAM 
+Hahn			AP_Calc_BC Analysis_H 
+Paley			AP_CSA CS_Capstone 
+Jamison			Geom Alg_2/Trig_A 
+new teacher		Geom 

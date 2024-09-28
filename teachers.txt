@@ -1,0 +1,134 @@
+19
+
+Bautista
+1111111
+all
+0
+0
+5
+
+Friedland
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+4
+
+Choi
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+1 Intro_to_Data_Sci
+5
+
+Florea
+1111000
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+2
+
+Congress
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+1 STATS_AP
+5
+
+Deggeller
+1110111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+4
+
+Hahn
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+1 AP_Calc_BC
+5
+
+Hawes
+0110111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+3
+
+Heupel
+1111111
+all
+0
+0
+5
+
+Hlasek
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+1 Analysis_H
+5
+
+Silverbrush
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+1 Alg_1
+5
+
+Kaneko
+0110111
+all
+0
+0
+3
+
+Limburg
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+5
+
+Paley
+1111111
+all
+0
+0
+5
+
+Redfield
+1111000
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+3
+
+Saxena
+1111000
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+3
+
+Tantod
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+1 Applied_Math_H
+5
+
+Siu
+1111000
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+0
+3
+
+Yun
+1111111
+all
+4 FOOP AP_CSP AP_CSA CS_Capstone
+1 Princ_of_Business
+5

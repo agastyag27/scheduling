@@ -1,0 +1,19 @@
+-65542.5
+name,per1,per2,per3,per4,per5,per6,per7
+Friedland,,AP_Calc_AB,Alg_2,Alg_2,,Alg_2,
+Silverbush,Alg_1,Alg_1,Alg_1,,Alg_2/Trig_A,Alg_2/Trig_A,
+Saxena,Precalc,Precalc,,,,,
+Hlasek,Geom,,Analysis_H,Analysis_H,Geom,Geom,Geom prep
+Redfield,AP_Calc_BC,AP_Calc_BC,Alg2/Trig_H,AP_Calc_BC,,Alg2/Trig_H,
+Siu,Alg2/Trig_H,Alg2/Trig_H,Geom_H,Alg2/Trig_H,Alg2/Trig_H,,
+Bautista,FOOP,STATS_AP,STATS_AP,FOOP,STATS_AP,,
+McDonnell,Alg_2/Trig_A,AP_CSP,Alg_2/Trig_A,Alg_2/Trig_A,AP_CSP,,
+Congress,IAC,,,STATS_AP,IAC,IAC,IAC
+Kaneko,,,,,FOOP,AP_CSP,FOOP
+Yun,Geom_H,Geom_H,IAC,,Geom_H,Geom_H,
+Limburg,AP_Calc_AB,IAC,AP_Calc_AB,AP_Calc_AB,AP_Calc_AB,,
+Tantod,Applied_Math_H,Applied_Math_H,,,Analysis_H,Applied_Math_H,
+Hahn,Analysis_H,Analysis_H,AP_Calc_BC,,AP_Calc_BC,,
+Paley,CS_Capstone,AP_CSA,AP_CSA,AP_CSA,CS_Capstone,,
+Jamison,Princ_of_Business,Geom,Princ_of_Business,Geom,,Geom,Geom prep
+new teacher,BEAM,Geom,Geom,,,,Geom prep
