@@ -61,8 +61,8 @@ bool make_teacher_assignments(vvi &is_teaching, ld temp = 0) {
         teacher_class_matching.addBounded(3*m+i, sink,
             classes.get(i, "minTeachers"), classes.get(i, "maxTeachers"), 0);
     }
-    teacher_class_matching.bounded_flow(source, sink);
-
+    pair<bool, ll> res = teacher_class_matching.bounded_flow(source, sink);
+    if (!res.first) return 0;
     for (int i = 0; i < m; i++) {
         int max_secs = 0;
         for (int j = 0; j < n; j++) {
@@ -405,7 +405,9 @@ int main() {
 			f = check_section_feasable(is_teaching);
 			// could potentially add in more checks (such as all CS teachers teaching a CS class)
 			evolve(temp, 0.1);
+			num++;
 		}
+		cerr << num << '\n';
 		print_matching(is_teaching);
 		cerr << "matched\n";
 		people_teaching = vvi(n, vi());

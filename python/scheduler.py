@@ -10,7 +10,7 @@ class Constants:
     eps = 1e-5
     max_temp = 20
     INF = 10**18  # a very large number
-    SEED = 0
+    SEED = 1
     fudge = True
     spread_weight = 5
     class_weight = 20
@@ -93,14 +93,14 @@ class MCMF:
         # This will hold the computed flow after bounded_flow is called.
         self.flow = None
 
-    def addEdge(self, u, v, cap, cost, to_fudge=True):
+    def add_edge(self, u, v, cap, cost, to_fudge=True):
         # Optionally add random “fudge” to cost.
         if to_fudge and Constants.fudge:
             cost += get_fudge(self.temp)
         self.G.add_edge(u, v, capacity=cap, weight=cost)
         self.lower_bounds[(u, v)] = 0
 
-    def addBounded(self, u, v, lb, ub, cost, to_fudge=True):
+    def add_bounded(self, u, v, lb, ub, cost, to_fudge=True):
         if to_fudge and Constants.fudge:
             cost += get_fudge(self.temp)
         # Add edge for the extra capacity (upper bound minus lower bound).
@@ -108,8 +108,8 @@ class MCMF:
             self.G.add_edge(u, v, capacity=ub - lb, weight=cost)
         self.lower_bounds[(u, v)] = lb
         # Adjust node demands so that at least lb flow is pushed on this edge.
-        self.G.nodes[u]['demand'] -= lb
-        self.G.nodes[v]['demand'] += lb
+        self.G.nodes[u]['demand'] += lb
+        self.G.nodes[v]['demand'] -= lb
 
     def bounded_flow(self, s, t):
         # Add an edge from t back to s to allow circulation.
@@ -156,7 +156,7 @@ class Scheduler:
     
     def make_teacher_assignments(self, temp=0):
         is_teaching = [[] for _ in range(self.m)]
-        total_nodes = 3*self.m + self.n + 4
+        total_nodes = 3*self.m + self.n + 2
         teacher_class_matching = MCMF(total_nodes, temp)
         source = 3*self.m + self.n
         sink = 3*self.m + self.n + 1
@@ -169,39 +169,39 @@ class Scheduler:
             if (extra_teaching <= 2 or 
                 (extra_teaching == 3 and random.choice([True, False])) or 
                 (extra_teaching == 4 and random.randint(0, 3) == 0)):
-                teacher_class_matching.addBounded(source, i, 1, 1, 0)
+                teacher_class_matching.add_bounded(source, i, 1, 1, 0)
                 num_teaching = 1
             else:
-                teacher_class_matching.addBounded(source, i, lim, lim, 0)
+                teacher_class_matching.add_bounded(source, i, lim, lim, 0)
                 num_teaching = 2
             if num_teaching == 1 and extra_teaching == 4:
-                teacher_class_matching.addEdge(i, 2*self.m + i, 1, 0)
+                teacher_class_matching.add_edge(i, 2*self.m + i, 1, 0)
             else:
-                teacher_class_matching.addEdge(i, self.m + i, 1, 0)
-                teacher_class_matching.addEdge(i, 2*self.m + i, 2, 0)
+                teacher_class_matching.add_edge(i, self.m + i, 1, 0)
+                teacher_class_matching.add_edge(i, 2*self.m + i, 2, 0)
             for v in range(self.n):
                 class_name = self.classes.entry_names[v]
                 if self.teachers.get(i, class_name) == 0:
                     continue
                 if self.classes.get(v, "isCollegePrep"):
-                    teacher_class_matching.addBounded(
+                    teacher_class_matching.add_bounded(
                         self.m + i, 3*self.m + v, 0, 1,
                         Constants.zero_cost_weight - self.teachers.get(i, class_name)
                     )
                 else:
-                    teacher_class_matching.addBounded(
+                    teacher_class_matching.add_bounded(
                         2*self.m + i, 3*self.m + v, 0, 1,
                         Constants.zero_cost_weight - self.teachers.get(i, class_name)
                     )
         for v in range(self.n):
-            teacher_class_matching.addBounded(
+            teacher_class_matching.add_bounded(
                 3*self.m + v, sink,
                 self.classes.get(v, "minTeachers"), self.classes.get(v, "maxTeachers"), 0
             )
         # Compute the flow and check feasibility before continuing.
         feasible, flowCost = teacher_class_matching.bounded_flow(source, sink)
         if not feasible:
-            #print("Teacher-class matching infeasible. Aborting assignment for this iteration.")
+            print("Teacher-class matching infeasible. Aborting assignment for this iteration.")
             return False, is_teaching
         # Now safely query flows.
         for i in range(self.m):
@@ -222,19 +222,19 @@ class Scheduler:
         return True, is_teaching
 
     def check_section_feasible(self, is_teaching):
-        total_nodes = self.m + self.n + 4
+        total_nodes = self.m + self.n + 2
         section_matching = MCMF(total_nodes)
         src = self.m + self.n
         snk = self.m + self.n + 1
         for i in range(self.m):
             numSections = self.teachers.get(i, "sections")
-            section_matching.addBounded(src, i, numSections, numSections, 0, to_fudge=False)
+            section_matching.add_bounded(src, i, numSections, numSections, 0, to_fudge=False)
             for v in is_teaching[i]:
                 cap = 3 if self.classes.get(v, "isCollegePrep") else 4
-                section_matching.addBounded(i, self.m + v, 1, cap, 0, to_fudge=False)
+                section_matching.add_bounded(i, self.m + v, 1, cap, 0, to_fudge=False)
         for v in range(self.n):
             numSections = self.classes.get(v, "sections")
-            section_matching.addBounded(self.m + v, snk, numSections, numSections, 0, to_fudge=False)
+            section_matching.add_bounded(self.m + v, snk, numSections, numSections, 0, to_fudge=False)
         feasible, _ = section_matching.bounded_flow(src, snk)
         return feasible
 
@@ -261,10 +261,10 @@ class Scheduler:
                     continue
                 if not self.check_section_feasible(assignments):
                     print("Section feasibility check failed. Retrying teacher assignments...")
+                    temp = Constants.max_temp - (Constants.max_temp - temp) * (1 - 0.1)
                     continue
                 success = True
                 is_teaching = assignments
-                temp = Constants.max_temp - (Constants.max_temp - temp) * (1 - 0.1)
             self.print_matching(is_teaching)
             # Build people_teaching from is_teaching.
             self.people_teaching = [[] for _ in range(self.n)]
@@ -283,8 +283,8 @@ class Scheduler:
 scheduler = Scheduler("classes.csv", "teachers.csv")
 scheduler.run()
 # mcmf = MCMF(total_nodes, temp)
-# mcmf.addEdge(0, 1, 10, 5)
-# mcmf.addBounded(1, 2, 2, 8, 3)
+# mcmf.add_edge(0, 1, 10, 5)
+# mcmf.add_bounded(1, 2, 2, 8, 3)
 # feasible, cost = mcmf.bounded_flow(source, sink)
 # if not feasible:
 #     print("Flow network is infeasible; please check your constraints.")
