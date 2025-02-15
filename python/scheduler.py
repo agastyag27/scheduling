@@ -219,9 +219,19 @@ class Scheduler:
                     classes_teaching[i].append(v)
         self.optimize_schedule(preps, classes_teaching)
     
+    def get_best_cost(self):
+        f = open("schedule.txt", "r")
+        cost = None
+        try:
+            cost = float(next(f))
+            if not cost:
+                cost = float('inf')
+        except Exception as e:
+            cost = float('inf')
+        return cost
+
     def optimize_schedule(self, preps, classes_teaching):
-        best_cost = float('inf')
-        best_count = None
+        best_cost = self.get_best_cost()
         for i in range(Constants.num_hill_climbs):
             count = self.iterate_schedule(preps, classes_teaching)
             cur_cost = self.evaluate_schedule(count, classes_teaching)
@@ -230,8 +240,6 @@ class Scheduler:
                 print(f"Found improved schedule at hill-climb iteration {i}: cost = {cur_cost:.10f}")
                 self.print_schedule(cur_cost)
                 self.print_diagnostics(count, classes_teaching)
-                best_count = count
-        return best_count
 
     def print_diagnostics(self, count, classes_teaching):
         spread_score = self.evaluate_spread(count)
