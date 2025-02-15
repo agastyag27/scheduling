@@ -2,7 +2,7 @@ Raw Spread: 199.5
 Adj. Spread: 997.5
 Raw Period Score: 0
 Adj. Period Score: 0
-Raw Class Score: -3327
-Adj. Class Score: -66540
+Raw Class Score: -2947
+Adj. Class Score: -58940
 
-Total (sum of adj): -65542.5
+Total Cost: -57942.5
