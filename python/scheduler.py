@@ -134,19 +134,19 @@ class Scheduler:
     def __init__(self, classes_file, teachers_file):
         self.classes = CSVFile(classes_file)
         self.teachers = CSVFile(teachers_file)
-        self.m = len(self.teachers.entry_names)
-        self.n = len(self.classes.entry_names)
+        self.m = len(self.teachers.entry_names)  # number of teachers
+        self.n = len(self.classes.entry_names)   # number of classes
         self.schedule = [[0]*Constants.NUM_PERIODS for _ in range(self.m)]
         self.num_avail = [0]*self.m
         for i in range(self.m):
-            # Transform teacher's scores for each class.
+            # Transform teacher’s scores for each class.
             for j in range(self.n):
                 score = self.teachers.get(i, self.classes.entry_names[j])
                 self.teachers.set(i, self.classes.entry_names[j], self.transform(score))
             for j in range(Constants.NUM_PERIODS):
                 if self.teachers.get(i, f"per{j+1}") > 0:
                     self.num_avail[i] += 1
-        # people_teaching: for each class, list teacher indices
+        # people_teaching: for each class, list teacher indices teaching that class.
         self.people_teaching = [[] for _ in range(self.n)]
     
     def transform(self, wt):
@@ -154,9 +154,14 @@ class Scheduler:
             return 0
         return int(1 + 100 * math.log2(wt))
     
+    def encode(self, v, is_prep):
+        # Returns a coded value for class v. In C++:
+        # return is_prep ? -v-1 : v+1;
+        return -v-1 if is_prep else v+1
+    
     def make_teacher_assignments(self, temp=0):
         is_teaching = [[] for _ in range(self.m)]
-        total_nodes = 3*self.m + self.n + 2
+        total_nodes = 3*self.m + self.n + 4
         teacher_class_matching = MCMF(total_nodes, temp)
         source = 3*self.m + self.n
         sink = 3*self.m + self.n + 1
@@ -198,12 +203,10 @@ class Scheduler:
                 3*self.m + v, sink,
                 self.classes.get(v, "minTeachers"), self.classes.get(v, "maxTeachers"), 0
             )
-        # Compute the flow and check feasibility before continuing.
         feasible, flowCost = teacher_class_matching.bounded_flow(source, sink)
         if not feasible:
-            print("Teacher-class matching infeasible. Aborting assignment for this iteration.")
+            #print("Teacher-class matching infeasible. Aborting assignment for this iteration.")
             return False, is_teaching
-        # Now safely query flows.
         for i in range(self.m):
             max_secs = 0
             for j in range(self.n):
@@ -211,18 +214,18 @@ class Scheduler:
                     flow1 = teacher_class_matching.get_flow(self.m + i, 3*self.m + j)
                     flow2 = teacher_class_matching.get_flow(2*self.m + i, 3*self.m + j)
                 except ValueError as e:
-                    print(f"Error getting flow for teacher {i}, class {j}: {e}")
+                    #print(f"Error getting flow for teacher {i}, class {j}: {e}")
                     return False, is_teaching
                 if flow1 or flow2:
                     is_teaching[i].append(j)
                     max_secs += self.classes.get(j, "sections")
             if max_secs < self.teachers.get(i, "sections"):
-                print(f"Teacher {i} does not meet section requirements.")
+                #print(f"Teacher {i} does not meet section requirements.")
                 return False, is_teaching
         return True, is_teaching
 
     def check_section_feasible(self, is_teaching):
-        total_nodes = self.m + self.n + 2
+        total_nodes = self.m + self.n + 4
         section_matching = MCMF(total_nodes)
         src = self.m + self.n
         snk = self.m + self.n + 1
@@ -238,13 +241,200 @@ class Scheduler:
         feasible, _ = section_matching.bounded_flow(src, snk)
         return feasible
 
-    def print_matching(self, is_teaching):
-        # Simple matching print-out.
+    def assign_preps(self):
+        # Build a preps table: one list per teacher (length = NUM_PERIODS) indicating if that period is used for prep.
+        preps = [[False] * Constants.NUM_PERIODS for _ in range(self.m)]
+        # Build list of classes that require common prep.
+        requires_prep = []
+        for v in range(self.n):
+            # If class v needs common prep and more than one teacher is teaching it.
+            if self.classes.get(v, "needsCommonPrep") and len(self.people_teaching[v]) > 1:
+                requires_prep.append(v)
+        # Shuffle the list randomly.
+        random.shuffle(requires_prep)
+        # For each class that requires prep...
+        for v in requires_prep:
+            # For each period, check if all teachers teaching class v are available and not already prepping.
+            avail = [True] * Constants.NUM_PERIODS
+            for i in self.people_teaching[v]:
+                for j in range(Constants.NUM_PERIODS):
+                    # A teacher is available in period j if his "per" score is positive and he isn’t already assigned a prep.
+                    avail[j] = avail[j] and (self.teachers.get(i, f"per{j+1}") > 0 and not preps[i][j])
+            # Collect available periods.
+            possible_periods = [j for j, available in enumerate(avail) if available]
+            if not possible_periods:
+                print(self.classes.entry_names[v])
+                raise Exception("No available period for class " + self.classes.entry_names[v])
+            prep = random.choice(possible_periods)
+            # Assign this period as a prep period for every teacher teaching class v.
+            for i in self.people_teaching[v]:
+                preps[i][prep] = True
+                self.schedule[i][prep] = self.encode(v, True)
+        return preps
+
+    def optimize_schedule(self, preps, classes_teaching):
+        # [This method is assumed to perform hill–climb optimization over the schedule.]
+        # For brevity, we assume its implementation is similar to the earlier translation.
+        best_cost = float('inf')
+        for _ in range(Constants.num_hill_climbs):
+            count = self.iterate_schedule(preps, classes_teaching)
+            cur_cost = self.evaluate_schedule(count, classes_teaching)
+            if cur_cost + Constants.eps < best_cost:
+                best_cost = cur_cost
+                self.print_schedule(cur_cost)
+                # Optionally, print diagnostics.
+    
+    def iterate_schedule(self, preps, classes_teaching):
+        # [A simplified translation of the iter(...) function from C++]
+        avail = [[(self.teachers.get(i, f"per{j+1}") > 0 and not preps[i][j])
+                  for j in range(Constants.NUM_PERIODS)]
+                 for i in range(self.m)]
+        # Reset schedule for non-prep periods.
         for i in range(self.m):
-            line = self.teachers.entry_names[i] + "\t" + " ".join(self.classes.entry_names[v] for v in is_teaching[i])
+            for j in range(Constants.NUM_PERIODS):
+                if not preps[i][j]:
+                    self.schedule[i][j] = 0
+        # Initialize count matrix: periods x classes.
+        count = [[0]*self.n for _ in range(Constants.NUM_PERIODS)]
+        to_assign = []
+        for i in range(self.m):
+            for v in classes_teaching[i]:
+                to_assign.append((i, v))
+        random.shuffle(to_assign)
+        for i, v in to_assign:
+            best_period = None
+            best_cost = float('inf')
+            for t in range(Constants.NUM_PERIODS):
+                if not avail[i][t]:
+                    continue
+                cur_cost = self.evaluate_spread_single(v, count[t][v]+1) - self.evaluate_spread_single(v, count[t][v])
+                if best_period is None or cur_cost < best_cost:
+                    best_period = t
+                    best_cost = cur_cost
+            if best_period is None:
+                raise Exception("No available period found")
+            avail[i][best_period] = False
+            self.schedule[i][best_period] = self.encode(v, False)
+            count[best_period][v] += 1
+        while self.hill_climb(preps, count):
+            pass
+        return count
+
+    def evaluate_spread_single(self, cla, cnt):
+        if cla == -1:
+            return 0
+        return (cnt*cnt / self.classes.get(cla, "sections")) + (3 if cnt == 0 else 0)
+
+    def evaluate_schedule(self, count, classes_teaching):
+        return (Constants.spread_weight * self.evaluate_spread(count) +
+                Constants.period_weight * self.evaluate_period_assignments() +
+                Constants.class_weight * self.evaluate_class_assignments(classes_teaching))
+
+    def evaluate_spread(self, count):
+        total = 0
+        for t in range(Constants.NUM_PERIODS):
+            for v in range(self.n):
+                total += self.evaluate_spread_single(v, count[t][v])
+        return total
+
+    def evaluate_period_assignments(self):
+        total = 0
+        for i in range(self.m):
+            for j in range(Constants.NUM_PERIODS):
+                if self.schedule[i][j]:
+                    total += self.get_point_period_cost(i, j)
+        return total
+
+    def get_point_period_cost(self, i, j):
+        return 5 - self.teachers.get(i, f"per{j+1}")
+
+    def evaluate_class_assignments(self, classes_teaching):
+        total = 0
+        for i in range(self.m):
+            for v in classes_teaching[i]:
+                total += Constants.zero_cost_weight - self.teachers.get(i, self.classes.entry_names[v])
+        return total
+
+    def hill_climb(self, preps, count):
+        found = False
+        for i in range(self.m):
+            improved = True
+            while improved:
+                improved = False
+                for j in range(Constants.NUM_PERIODS):
+                    if preps[i][j] or self.teachers.get(i, f"per{j+1}") == 0:
+                        continue
+                    for k in range(j+1, Constants.NUM_PERIODS):
+                        if preps[i][k] or self.teachers.get(i, f"per{k+1}") == 0 or self.schedule[i][j] == self.schedule[i][k]:
+                            continue
+                        a = self.schedule[i][j]
+                        b = self.schedule[i][k]
+                        # Decode the assigned classes.
+                        a_dec = -a-1 if a < 0 else a-1
+                        b_dec = -b-1 if b < 0 else b-1
+                        cur_cost = (Constants.spread_weight * (self.evaluate_spread_single(a_dec, count[j][a_dec]) +
+                                    self.evaluate_spread_single(b_dec, count[k][b_dec]) +
+                                    self.evaluate_spread_single(a_dec, count[k][a_dec]) +
+                                    self.evaluate_spread_single(b_dec, count[j][b_dec])) +
+                                    Constants.period_weight * ((self.get_point_period_cost(i, j) if self.schedule[i][j] else 0) +
+                                                               (self.get_point_period_cost(i, k) if self.schedule[i][k] else 0)))
+                        next_cost = (Constants.spread_weight * (self.evaluate_spread_single(a_dec, count[j][a_dec]-1) +
+                                     self.evaluate_spread_single(b_dec, count[k][b_dec]-1) +
+                                     self.evaluate_spread_single(a_dec, count[k][a_dec]+1) +
+                                     self.evaluate_spread_single(b_dec, count[j][b_dec]+1)) +
+                                     Constants.period_weight * ((self.get_point_period_cost(i, j) if self.schedule[i][k] else 0) +
+                                                                (self.get_point_period_cost(i, k) if self.schedule[i][j] else 0)))
+                        if cur_cost > next_cost + Constants.eps:
+                            if a_dec != -1:
+                                count[j][a_dec] -= 1
+                                count[k][a_dec] += 1
+                            if b_dec != -1:
+                                count[j][b_dec] += 1
+                                count[k][b_dec] -= 1
+                            self.schedule[i][j], self.schedule[i][k] = self.schedule[i][k], self.schedule[i][j]
+                            improved = True
+                            found = True
+        return found
+
+    def make_matching(self, preps, is_teaching):
+        sz = 2 + self.m + self.n
+        class_matchings = MCMF(sz + 2, temp=0)
+        src = sz - 2
+        snk = sz - 1
+        for i in range(self.m):
+            sections = self.teachers.get(i, "sections")
+            class_matchings.add_bounded(src, i, sections, sections, 0, to_fudge=False)
+            for v in is_teaching[i]:
+                cap = 3 if self.classes.get(v, "isCollegePrep") else 4
+                class_matchings.add_bounded(i, self.m + v, 1, cap, 0, to_fudge=False)
+        for i in range(self.n):
+            numSections = self.classes.get(i, "sections")
+            class_matchings.add_bounded(self.m + i, snk, numSections, numSections, 0, to_fudge=False)
+        feasible, _ = class_matchings.bounded_flow(src, snk)
+        if not feasible:
+            raise Exception("Class matching flow infeasible.")
+        classes_teaching = [[] for _ in range(self.m)]
+        for i in range(self.m):
+            for v in is_teaching[i]:
+                flow_val = int(class_matchings.get_flow(i, self.m + v))
+                for _ in range(flow_val):
+                    classes_teaching[i].append(v)
+        self.optimize_schedule(preps, classes_teaching)
+
+    def print_schedule(self, cost):
+        print(f"Schedule cost: {cost}")
+        header = "name," + ",".join([f"per{j+1}" for j in range(Constants.NUM_PERIODS)])
+        print(header)
+        for i in range(self.m):
+            line = self.teachers.entry_names[i]
+            for j in range(Constants.NUM_PERIODS):
+                line += f", {self.get_class(self.schedule[i][j])}"
             print(line)
 
-    # Assume additional methods like assign_preps, make_matching, etc. are defined here.
+    def get_class(self, v):
+        if v == 0:
+            return ""
+        return self.classes.entry_names[-v-1] + " prep" if v < 0 else self.classes.entry_names[v-1]
 
     def run(self):
         iteration = 0
@@ -253,31 +443,33 @@ class Scheduler:
             print(f"Iteration {iteration}")
             success = False
             is_teaching = None
-            # Retry teacher assignment until both matching and section feasibility pass.
             while not success:
                 res, assignments = self.make_teacher_assignments(temp)
                 if not res:
                     #print("Teacher assignment failed. Retrying...")
                     continue
                 if not self.check_section_feasible(assignments):
-                    print("Section feasibility check failed. Retrying teacher assignments...")
-                    temp = Constants.max_temp - (Constants.max_temp - temp) * (1 - 0.1)
+                    #print("Section feasibility check failed. Retrying teacher assignments...")
                     continue
                 success = True
                 is_teaching = assignments
+                temp = Constants.max_temp - (Constants.max_temp - temp) * (1 - 0.1)
             self.print_matching(is_teaching)
-            # Build people_teaching from is_teaching.
             self.people_teaching = [[] for _ in range(self.n)]
             for i in range(self.m):
                 for v in is_teaching[i]:
                     self.people_teaching[v].append(i)
-            # Continue with the rest of the scheduling process...
             for _ in range(Constants.num_sub_iters):
                 preps = self.assign_preps()
                 self.make_matching(preps, is_teaching)
             iteration += 1
             # For demonstration, break after one iteration.
             break
+
+    def print_matching(self, is_teaching):
+        for i in range(self.m):
+            line = self.teachers.entry_names[i] + "\t" + " ".join(self.classes.entry_names[v] for v in is_teaching[i])
+            print(line)
 
 # Example usage:
 scheduler = Scheduler("classes.csv", "teachers.csv")
