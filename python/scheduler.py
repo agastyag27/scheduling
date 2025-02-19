@@ -63,7 +63,7 @@ class CSVFile:
     def print(self):
         print("name," + ",".join(self.field_names))
         for i, name in enumerate(self.entry_names):
-            print(name + "," + ",".join(map(str, self.data_entries[i])))
+            print(name + "," + (",".join(map(str, self.data_entries[i])) if self.data_entries[i] else "prep"))
 
     def get(self, i, field):
         assert field in self.field_to_index, f"Field {field} not found"
@@ -445,7 +445,7 @@ class Scheduler:
         Writes the schedule to "schedule.txt" and prints it to the console.
         """
         # Build header: "name,per1,per2,..."
-        header = "name," + ",".join([f"per{j+1}" for j in range(Constants.NUM_PERIODS)])
+        header = "Name," + ",".join([f"Period {j+1}" for j in range(Constants.NUM_PERIODS)])
         output_lines = [f"{cost}", header]
         # For each teacher, build a row with teacher name and the assignment for each period.
         for i in range(self.m):
