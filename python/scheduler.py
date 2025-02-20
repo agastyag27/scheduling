@@ -1,8 +1,10 @@
 import csv
 import math
 import random
-import heapq
 import networkx as nx
+import time
+import os
+import multiprocessing
 
 # Constants from includes_and_constants.h
 class Constants:
@@ -10,7 +12,6 @@ class Constants:
     eps = 1e-5
     max_temp = 20
     INF = 10**18  # a very large number
-    SEED = 69420
     fudge = True
     spread_weight = 5
     class_weight = 20
@@ -19,8 +20,6 @@ class Constants:
     num_hill_climbs = 100
     zero_cost_weight = 170
     classes_out_of_range_penalty = 100
-
-random.seed(Constants.SEED)
 
 def get_fudge(temp):
     if temp < Constants.eps:
@@ -132,6 +131,7 @@ class MCMF:
 # and the scheduling/hill–climb optimization (from schedule.cpp)f
 class Scheduler:
     def __init__(self, classes_file, teachers_file):
+        random.seed(time.time()+os.getpid())
         self.classes = CSVFile(classes_file)
         self.teachers = CSVFile(teachers_file)
         self.m = len(self.teachers.entry_names)
@@ -597,24 +597,15 @@ class Scheduler:
             # For demonstration, break after one iteration.
             # break
 
-# Example usage:
-scheduler = Scheduler("classes.csv", "teachers.csv")
-scheduler.run()
-# mcmf = MCMF(total_nodes, temp)
-# mcmf.add_edge(0, 1, 10, 5)
-# mcmf.add_bounded(1, 2, 2, 8, 3)
-# feasible, cost = mcmf.bounded_flow(source, sink)
-# if not feasible:
-#     print("Flow network is infeasible; please check your constraints.")
-# else:
-#     print("Total cost:", cost)
-#     print("Flow from 0 to 1:", mcmf.get_flow(0, 1))
-"""  
-In this Python version:
-• The CSVFile class (from csvreader.h citeturn0file0) reads a CSV with a header beginning with “name.”
-• The Constants class (from includes_and_constants.h citeturn0file1) holds parameters and type–equivalent values.
-• The MCMF class (from mcmf.h citeturn0file3) implements a min–cost max–flow algorithm.
-• The Scheduler class (combining make_teacher_assignments.h citeturn0file2 and schedule.cpp citeturn0file4) contains methods for teacher–assignment, checking feasibility, scheduling (including hill–climb optimization), and running the full process.
+def run_scheduler():
+    scheduler = Scheduler("classes.csv", "teachers.csv")
+    scheduler.run()
 
-This “translation” preserves much of the structure and logic of the original C++ code while using Python’s classes and standard libraries. (Note that real–world use would require further testing and debugging.)
-"""
+if __name__ == '__main__':
+    processes = []
+    for _ in range(multiprocessing.cpu_count()):
+        p = multiprocessing.Process(target=run_scheduler)
+        p.start()
+        processes.append(p)
+    for p in processes:
+        p.join()

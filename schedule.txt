@@ -1,19 +1,19 @@
--63022.5
+-63861.5
 Name,Period 1,Period 2,Period 3,Period 4,Period 5,Period 6,Period 7
-Friedland,,Alg_2,Alg_2,Alg_2,,AP_Calc_AB,
-Silverbush,Alg_2/Trig_A,Alg_1,Alg_2/Trig_A,Alg_1,Alg_1,,
-Saxena,Precalc,Precalc,,,,,
-Hlasek,Geom,Analysis_H,Geom,Analysis_H,Geom,,Geom prep
-Redfield,AP_Calc_BC,AP_Calc_BC,AP_Calc_BC,,AP_Calc_BC,Alg2/Trig_H,
-Siu,Alg2/Trig_H,Alg2/Trig_H,Geom_H,Alg2/Trig_H,Alg2/Trig_H,,
-Bautista,FOOP,FOOP,FOOP,STATS_AP,STATS_AP,,
-McDonnell,AP_CSP,IAC,AP_CSP,IAC,AP_CSP,,
-Congress,IAC,STATS_AP,IAC,,,IAC,STATS_AP
-Kaneko,,,,,Princ_of_Business,Princ_of_Business,FOOP
-Yun,Geom_H,Geom_H,Alg2/Trig_H,,Geom_H,Geom_H,
-Limburg,AP_Calc_AB,AP_Calc_AB,AP_Calc_AB,AP_Calc_AB,IAC,,
-Tantod,Applied_Math_H,Applied_Math_H,,,BEAM,Applied_Math_H,
-Hahn,Analysis_H,,Analysis_H,AP_Calc_BC,Analysis_H,,
-Paley,AP_CSA,AP_CSA,AP_CSA,CS_Capstone,CS_Capstone,,
-Jamison,Geom,Alg_2/Trig_A,,Alg_2/Trig_A,Alg_2/Trig_A,Geom,Geom prep
-new teacher,,Geom,Geom,Geom,,,Geom prep
+Friedland,,AP_Calc_AB,Alg_2,Alg_2,,Alg_2,
+Silverbush,Alg_1,Alg_2/Trig_A,Alg_1,Alg_1,,Alg_2/Trig_A,
+Saxena,Geom prep,Geom,,,,Geom,
+Hlasek,Geom prep,,Analysis_H,Geom,Geom,Geom,Analysis_H
+Redfield,AP_Calc_BC,AP_Calc_BC,AP_Calc_BC,Alg2/Trig_H,,Alg2/Trig_H,
+Siu,Alg2/Trig_H,Alg2/Trig_H,Alg2/Trig_H,Geom_H,Alg2/Trig_H,,
+Bautista,FOOP,STATS_AP,STATS_AP,STATS_AP,FOOP,,
+McDonnell,AP_CSP,AP_CSP,Alg_2/Trig_A,Alg_2/Trig_A,Alg_2/Trig_A,,
+Congress,IAC,IAC,IAC,IAC,STATS_AP,,
+Kaneko,,,,,AP_CSP,FOOP,FOOP
+Yun,Geom_H,Geom_H,Geom_H,,Geom_H,IAC,
+Limburg,AP_Calc_AB,,AP_Calc_AB,AP_Calc_AB,IAC,AP_Calc_AB,
+Tantod,Analysis_H,Applied_Math_H,,,Applied_Math_H,Applied_Math_H,
+Hahn,,Analysis_H,,AP_Calc_BC,AP_Calc_BC,Analysis_H,
+Paley,CS_Capstone,AP_CSA,AP_CSA,AP_CSA,CS_Capstone,,
+Jamison,Geom prep,Princ_of_Business,Geom,Princ_of_Business,Geom,,Geom
+new teacher,Precalc,Precalc,BEAM,,,,
