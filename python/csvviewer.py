@@ -28,14 +28,12 @@ for index, cls in enumerate(unique_classes):
     base_hue = index / N  # Equally spaced in the range [0,1)
     class_base_hues[cls] = base_hue
 
-def get_dynamic_color_for_class(class_name, offset):
+def get_dynamic_color_for_class(class_name):
     # Return white if the cell is empty.
     if not class_name or class_name.strip() == "":
         return "white"
     # Look up the base hue for this class.
-    base_hue = class_base_hues.get(class_name.strip(), 0)
-    # Add a time-based offset to animate the color.
-    hue = (base_hue + offset) % 1.0
+    hue = class_base_hues.get(class_name.strip(), 0)
     saturation = 0.2
     brightness = 0.99
     r, g, b = colorsys.hsv_to_rgb(hue, saturation, brightness)
@@ -59,7 +57,7 @@ for i, row in enumerate(data):
             bg_color = "lightgray"
             font = ("Helvetica", 10, "bold")
         else:
-            bg_color = get_dynamic_color_for_class(cell, 0)
+            bg_color = get_dynamic_color_for_class(cell)
             font = ("Helvetica", 10)
         label = tk.Label(frame,
                          text=cell,
@@ -78,9 +76,8 @@ for i, row in enumerate(data):
 
 def update_colors():
     # Define a period (in seconds) for a full hue rotation.
-    offset = (time.time()/100) % 1.0
     for label, cell in animated_cells:
-        new_color = get_dynamic_color_for_class(cell, offset)
+        new_color = get_dynamic_color_for_class(cell)
         label.config(bg=new_color)
     # Schedule the next update after 50 milliseconds.
     root.after(50, update_colors)
