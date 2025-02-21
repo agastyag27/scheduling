@@ -582,10 +582,6 @@ class Scheduler:
             while not success:
                 res, assignments = self.make_teacher_assignments(temp)
                 assignment_hash = self.hash_teacher_class_assignments(assignments)
-                if assignment_hash in current_hashes:
-                    print("aha")
-                else:
-                    print("eh")
                 if not res or assignment_hash in current_hashes:
                     #print("Teacher assignment failed. Retrying...")
                     continue
