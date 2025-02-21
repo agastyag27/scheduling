@@ -5,6 +5,7 @@ import networkx as nx
 import time
 import os
 import multiprocessing
+import hashlib
 
 # Constants from includes_and_constants.h
 class Constants:
@@ -131,7 +132,7 @@ class MCMF:
 # and the scheduling/hill–climb optimization (from schedule.cpp)f
 class Scheduler:
     def __init__(self, classes_file, teachers_file):
-        random.seed(time.time()+os.getpid())
+        random.seed(time.time()*os.getpid())
         self.classes = CSVFile(classes_file)
         self.teachers = CSVFile(teachers_file)
         self.m = len(self.teachers.entry_names)
@@ -472,6 +473,9 @@ class Scheduler:
             return ""
         return self.classes.entry_names[-v-1] + " prep" if v < 0 else self.classes.entry_names[v-1]
 
+    def hash_teacher_class_assignments(self, is_teaching):
+        return hash(str(is_teaching))
+    
     def make_teacher_assignments(self, temp=0):
         is_teaching = [[] for _ in range(self.m)]
         total_nodes = 3*self.m + self.n + 2
@@ -571,18 +575,29 @@ class Scheduler:
             print(f"Iteration {iteration}")
             success = False
             is_teaching = None
+            current_hashes = set()
+            with open("hashed_assignments.txt") as f:
+                current_hashes = set(int(x) for x in f.read().split() if x)
             # Retry teacher assignment until both matching and section feasibility pass.
             while not success:
                 res, assignments = self.make_teacher_assignments(temp)
-                if not res:
+                assignment_hash = self.hash_teacher_class_assignments(assignments)
+                if assignment_hash in current_hashes:
+                    print("aha")
+                else:
+                    print("eh")
+                if not res or assignment_hash in current_hashes:
                     #print("Teacher assignment failed. Retrying...")
                     continue
+                current_hashes.add(assignment_hash)
                 if not self.check_section_feasible(assignments):
                     # print("Section feasibility check failed. Retrying teacher assignments...")
                     temp = Constants.max_temp - (Constants.max_temp - temp) * (1 - 0.1)
                     continue
                 success = True
                 is_teaching = assignments
+            with open("hashed_assignments.txt", "w") as f:
+                f.write(" ".join([str(x) for x in current_hashes]))
             self.print_matching(is_teaching)
             # Build people_teaching from is_teaching.
             self.people_teaching = [[] for _ in range(self.n)]
