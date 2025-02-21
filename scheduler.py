@@ -568,6 +568,9 @@ class Scheduler:
 
     # Assume additional methods like assign_preps, make_matching, etc. are defined here.
 
+    def get_wait_time(self, cache_size):
+        return 1 + (cache_size // 200)
+
     def run(self):
         iteration = 0
         temp = 0
@@ -575,25 +578,40 @@ class Scheduler:
             print(f"Iteration {iteration}")
             success = False
             is_teaching = None
+            # Retry teacher assignment until both matching and section feasibility pass.
             current_hashes = set()
             with open("hashed_assignments.txt") as f:
                 current_hashes = set(int(x) for x in f.read().split() if x)
-            # Retry teacher assignment until both matching and section feasibility pass.
+            delay = self.get_wait_time(len(current_hashes))
+            temp_hashes = set()
+
             while not success:
+                if delay == 0:
+                    with open("hashed_assignments.txt") as f:
+                        current_hashes = set(int(x) for x in f.read().split() if x)
+                    current_hashes |= temp_hashes
+                    temp_hashes.clear()
+                    with open("hashed_assignments.txt", "w") as f:
+                        f.write(" ".join([str(x) for x in current_hashes]))
+                    delay = self.get_wait_time(len(current_hashes))
+                    assert delay > 0
+
                 res, assignments = self.make_teacher_assignments(temp)
                 assignment_hash = self.hash_teacher_class_assignments(assignments)
+
+                delay -= 1
+
                 if not res or assignment_hash in current_hashes:
                     #print("Teacher assignment failed. Retrying...")
                     continue
-                current_hashes.add(assignment_hash)
+                temp_hashes.add(assignment_hash)
                 if not self.check_section_feasible(assignments):
                     # print("Section feasibility check failed. Retrying teacher assignments...")
                     temp = Constants.max_temp - (Constants.max_temp - temp) * (1 - 0.1)
                     continue
                 success = True
                 is_teaching = assignments
-            with open("hashed_assignments.txt", "w") as f:
-                f.write(" ".join([str(x) for x in current_hashes]))
+
             self.print_matching(is_teaching)
             # Build people_teaching from is_teaching.
             self.people_teaching = [[] for _ in range(self.n)]
