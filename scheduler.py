@@ -5,7 +5,7 @@ import networkx as nx
 import time
 import os
 import multiprocessing
-import hashlib
+import json
 
 # Constants from includes_and_constants.h
 class Constants:
@@ -221,15 +221,13 @@ class Scheduler:
         self.optimize_schedule(preps, classes_teaching)
     
     def get_best_cost(self):
-        f = open("schedule.txt", "r")
-        cost = None
         try:
-            cost = float(next(f))
+            cost = json.load(open("schedule.json", "r"))['cost']
             if not cost:
                 cost = float('inf')
+            return cost
         except Exception as e:
-            cost = float('inf')
-        return cost
+            return float('inf')
 
     def optimize_schedule(self, preps, classes_teaching):
         best_cost = self.get_best_cost()
@@ -446,21 +444,12 @@ class Scheduler:
         Writes the schedule to "schedule.txt" and prints it to the console.
         """
         # Build header: "name,per1,per2,..."
-        header = "Name," + ",".join([f"Period {j+1}" for j in range(Constants.NUM_PERIODS)])
-        output_lines = [f"{cost}", header]
         # For each teacher, build a row with teacher name and the assignment for each period.
-        for i in range(self.m):
-            line = self.teachers.entry_names[i]
-            for j in range(Constants.NUM_PERIODS):
-                # Use self.get_class to decode the schedule entry.
-                line += "," + self.get_class(self.schedule[i][j])
-            output_lines.append(line)
-        output_str = "\n".join(output_lines)
-        # Write to file.
-        with open("schedule.txt", "w") as fout:
-            fout.write(output_str)
-        # Also print the schedule.
-        print(output_str)
+        headers = ["Name"] + [f"Period {j+1}" for j in range(Constants.NUM_PERIODS)]
+        schedule_with_names = [[self.get_class(entry) for entry in row] for row in self.schedule]
+        output = {"cost": cost, "headers": headers, "schedule": schedule_with_names, "names": self.teachers.entry_names}
+        with open("schedule.json", "w") as f:
+            json.dump(output, f)
 
     def get_class(self, v):
         """
