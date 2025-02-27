@@ -1,31 +1,37 @@
 import tkinter as tk
-import csv
-import time
+import json
 import colorsys
 
-# Read the CSV data from the schedule.txt file.
-data = []
-with open("schedule.txt", newline="") as csvfile:
-    reader = csv.reader(csvfile)
-    for row in reader:
-        data.append(row)
-    # If the first row is a header row, you may remove it:
-    data.pop(0)
+# Read the JSON data from the schedule.json file.
+with open("schedule.json", "r") as f:
+    data_json = json.load(f)
 
-# Compute the unique class names from non-header cells.
+# Extract the cost, headers, schedule, and teacher names.
+cost = data_json["cost"]
+headers = data_json["headers"]
+schedule = data_json["schedule"]
+names = data_json["names"]
+
+# Combine the teacher names with their schedule rows.
+# The resulting table's first row is the header.
+data = [headers]
+for teacher_name, sched_row in zip(names, schedule):
+    data.append([teacher_name] + sched_row)
+
+# Compute unique class names from non-header cells.
 unique_classes = set()
-# Assume the first row and first column are headers.
 for i, row in enumerate(data):
     for j, cell in enumerate(row):
+        # Skip header row and teacher names column.
         if i != 0 and j != 0 and cell.strip():
             unique_classes.add(cell.strip())
-unique_classes = sorted(list(unique_classes))
+unique_classes = sorted(unique_classes)
 
-# Map each class name to a base hue (equally spaced on the hue wheel).
+# Map each class name to a base hue (evenly spaced on the hue wheel).
 class_base_hues = {}
 N = len(unique_classes)
 for index, cls in enumerate(unique_classes):
-    base_hue = index / N  # Equally spaced in the range [0,1)
+    base_hue = index / N
     class_base_hues[cls] = base_hue
 
 def get_dynamic_color_for_class(class_name):
@@ -39,9 +45,9 @@ def get_dynamic_color_for_class(class_name):
     r, g, b = colorsys.hsv_to_rgb(hue, saturation, brightness)
     return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
 
-# Create the main application window.
+# Create the main application window and include the cost in the title.
 root = tk.Tk()
-root.title("Schedule Table")
+root.title(f"Schedule Table - Cost: {cost}")
 
 # Create a frame to hold the table.
 frame = tk.Frame(root)
@@ -75,7 +81,7 @@ for i, row in enumerate(data):
             animated_cells.append((label, cell))
 
 def update_colors():
-    # Define a period (in seconds) for a full hue rotation.
+    # Update the colors of the animated cells.
     for label, cell in animated_cells:
         new_color = get_dynamic_color_for_class(cell)
         label.config(bg=new_color)
