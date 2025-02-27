@@ -1,135 +1,13 @@
-import csv
 import math
-import random
-import networkx as nx
 import time
 import os
 import multiprocessing
 import json
 
-# Constants from includes_and_constants.h
-class Constants:
-    NUM_PERIODS = 7
-    eps = 1e-5
-    max_temp = 20
-    INF = 10**18  # a very large number
-    fudge = True
-    spread_weight = 5
-    class_weight = 20
-    period_weight = 1
-    num_sub_iters = 10
-    num_hill_climbs = 100
-    zero_cost_weight = 170
-    classes_out_of_range_penalty = 100
+from constants import Constants
+from csvfile import CSVFile
+from mcmf import MCMF
 
-def get_fudge(temp):
-    if temp < Constants.eps:
-        return 0
-    a = 0
-    g = random.randint(0, 2**32 - 1)
-    while g - (temp+1) * (g // (temp+1)) < temp:
-        a += 1
-        g = random.randint(0, 2**32 - 1)
-    return a
-
-# CSVFile class – conversion of csvreader.h
-class CSVFile:
-    def __init__(self, filename):
-        self.entry_names = []
-        self.field_names = []
-        self.field_to_index = {}
-        self.name_to_index = {}
-        self.data_entries = []
-        with open(filename, newline='') as csvfile:
-            reader = csv.reader(csvfile)
-            header = next(reader)
-            # remove trailing carriage returns if any
-            header = [h.rstrip('\r') for h in header]
-            assert header[0] == "name", "First field must be 'name'"
-            self.field_names = header[1:]
-            for idx, field in enumerate(self.field_names):
-                self.field_to_index[field] = idx
-            for row in reader:
-                if not row: 
-                    continue
-                row = [x.rstrip('\r') for x in row]
-                name = row[0]
-                self.entry_names.append(name)
-                self.name_to_index[name] = len(self.entry_names) - 1
-                # convert remaining fields to int
-                self.data_entries.append([int(x) for x in row[1:]])
-        self.sz = len(self.data_entries)
-
-    def print(self):
-        print("name," + ",".join(self.field_names))
-        for i, name in enumerate(self.entry_names):
-            print(name + "," + (",".join(map(str, self.data_entries[i])) if self.data_entries[i] else "prep"))
-
-    def get(self, i, field):
-        assert field in self.field_to_index, f"Field {field} not found"
-        return self.data_entries[i][self.field_to_index[field]]
-
-    def set(self, i, field, value):
-        assert field in self.field_to_index, f"Field {field} not found"
-        self.data_entries[i][self.field_to_index[field]] = value
-
-    def check_name(self, s):
-        assert s in self.name_to_index, f"Name {s} not found"
-
-    def print_names(self):
-        print(",".join(self.entry_names))
-
-# MCMF class – conversion of mcmf.h
-class MCMF:
-    def __init__(self, N, temp=0):
-        self.N = N
-        self.temp = temp
-        self.G = nx.DiGraph()
-        # Initialize nodes with zero demand.
-        for i in range(N):
-            self.G.add_node(i, demand=0)
-        # Dictionary to store lower bounds for edges.
-        self.lower_bounds = {}
-        # This will hold the computed flow after bounded_flow is called.
-        self.flow = None
-
-    def add_edge(self, u, v, cap, cost, to_fudge=True):
-        # Optionally add random “fudge” to cost.
-        if to_fudge and Constants.fudge:
-            cost += get_fudge(self.temp)
-        self.G.add_edge(u, v, capacity=cap, weight=cost)
-        self.lower_bounds[(u, v)] = 0
-
-    def add_bounded(self, u, v, lb, ub, cost, to_fudge=True):
-        if to_fudge and Constants.fudge:
-            cost += get_fudge(self.temp)
-        # Add edge for the extra capacity (upper bound minus lower bound).
-        if ub > lb:
-            self.G.add_edge(u, v, capacity=ub - lb, weight=cost)
-        self.lower_bounds[(u, v)] = lb
-        # Adjust node demands so that at least lb flow is pushed on this edge.
-        self.G.nodes[u]['demand'] += lb
-        self.G.nodes[v]['demand'] -= lb
-
-    def bounded_flow(self, s, t):
-        # Add an edge from t back to s to allow circulation.
-        self.G.add_edge(t, s, capacity=Constants.INF, weight=0)
-        try:
-            flowCost, flowDict = nx.network_simplex(self.G)
-        except nx.NetworkXUnfeasible:
-            self.flow = None
-            return (False, None)
-        self.flow = flowDict
-        return (True, flowCost)
-
-    def get_flow(self, u, v):
-        if self.flow is None:
-            raise ValueError("Flow has not been computed. Ensure that bounded_flow() returns a feasible solution before calling get_flow().")
-        # The actual flow is the computed flow plus the lower bound.
-        return self.flow.get(u, {}).get(v, 0) + self.lower_bounds.get((u, v), 0)
-
-# Scheduler class – combines the teacher–assignment (from make_teacher_assignments.h)
-# and the scheduling/hill–climb optimization (from schedule.cpp)f
 class Scheduler:
     def __init__(self, classes_file, teachers_file):
         random.seed(time.time()*os.getpid())
