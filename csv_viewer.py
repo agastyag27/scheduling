@@ -1,6 +1,8 @@
 import tkinter as tk
 import json
 import colorsys
+import csv
+from tkinter import filedialog
 
 NUM_SCHEDULES = 5  # Number of top schedules stored
 
@@ -48,11 +50,32 @@ def update_schedule(index):
             text_value = ""
             if i == 0:
                 text_value = headers[j] if j < len(headers) else ""
+                cell.config(text=text_value, bg="lightgray", font=("Helvetica", 10, "bold"))
             elif j == 0:
                 text_value = names[i - 1] if i - 1 < len(names) else ""
+                cell.config(text=text_value, bg="lightgray", font=("Helvetica", 10, "bold"))
             else:
                 text_value = schedule[i - 1][j - 1] if i - 1 < len(schedule) and j - 1 < len(schedule[i - 1]) else ""
-            cell.config(text=text_value, bg=get_dynamic_color_for_class(text_value))
+                cell.config(text=text_value, bg=get_dynamic_color_for_class(text_value), font=("Helvetica", 10))
+
+def download_csv():
+    """ Prompts the user to save the current schedule as a CSV file (without the cost). """
+    # Build the table data: first row is headers; subsequent rows are teacher names + schedule row.
+    table = []
+    table.append(headers)
+    for i, teacher_name in enumerate(names):
+        row = [teacher_name] + schedule[i]
+        table.append(row)
+    # Ask user where to save the CSV file.
+    file_path = filedialog.asksaveasfilename(
+        defaultextension=".csv",
+        filetypes=[("CSV files", "*.csv")],
+        title="Save schedule as CSV"
+    )
+    if file_path:
+        with open(file_path, "w", newline="") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerows(table)
 
 # Compute unique class names from non-header cells.
 unique_classes = set()
@@ -102,7 +125,7 @@ for i in range(len(names) + 1):
 # Update the table with current schedule
 update_schedule(0)
 
-# Navigation buttons
+# Navigation buttons and download button
 button_frame = tk.Frame(root)
 button_frame.pack(pady=10)
 
@@ -116,10 +139,14 @@ def next_schedule():
     if schedules:
         update_schedule((current_index + 1) % len(schedules))
 
+# Using grid to neatly arrange buttons
 prev_button = tk.Button(button_frame, text="Previous", command=prev_schedule)
-prev_button.pack(side="left", padx=10)
+prev_button.grid(row=0, column=0, padx=10)
+
+download_button = tk.Button(button_frame, text="Download CSV", command=download_csv)
+download_button.grid(row=0, column=1, padx=10)
 
 next_button = tk.Button(button_frame, text="Next", command=next_schedule)
-next_button.pack(side="right", padx=10)
+next_button.grid(row=0, column=2, padx=10)
 
 root.mainloop()
