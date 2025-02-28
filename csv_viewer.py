@@ -70,8 +70,8 @@ def get_dynamic_color_for_class(class_name):
     """ Generates a dynamic color based on the class name. """
     if not class_name or class_name.strip() == "":
         return "white"
-    hue = class_base_hues.get(class_name.strip(), 0)
-    r, g, b = colorsys.hsv_to_rgb(hue, 0.2, 0.99)
+    hue = class_base_hues.get(class_name.strip(), -1)
+    r, g, b = colorsys.hsv_to_rgb(hue, 0 if hue == -1 else 0.2, 0.9 if hue == -1 else 0.99)
     return f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
 
 # Create the main application window
