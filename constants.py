@@ -11,3 +11,4 @@ class Constants:
     num_hill_climbs = 100
     zero_cost_weight = 170
     classes_out_of_range_penalty = 100
+    NUM_SCHEDULES = 5

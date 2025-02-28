@@ -1,8 +1,10 @@
+import random
 import math
 import time
 import os
 import multiprocessing
 import json
+import copy
 
 from constants import Constants
 from csvfile import CSVFile
@@ -73,6 +75,7 @@ class Scheduler:
         else:
             return encoded - 1, False
     
+    # TODO: add some variation
     def make_matching(self, preps, is_teaching):
         sz = 2 + self.m + self.n
         class_matchings = MCMF(sz + 2, temp=0)
@@ -96,27 +99,33 @@ class Scheduler:
                 flow_val = int(class_matchings.get_flow(i, self.m + v))
                 for _ in range(flow_val):
                     classes_teaching[i].append(v)
-        self.optimize_schedule(preps, classes_teaching)
+        return self.optimize_schedule(preps, classes_teaching)
     
     def get_best_cost(self):
         try:
-            cost = json.load(open("schedule.json", "r"))['cost']
-            if not cost:
-                cost = float('inf')
-            return cost
-        except Exception as e:
+            with open("top_schedules.json", "r") as f:
+                schedules = json.load(f)
+            if not schedules or len(schedules) < Constants.NUM_SCHEDULES:
+                return float('inf')
+            return max(s['cost'] for s in schedules)  # Return the worst (highest) cost
+        except Exception:
             return float('inf')
 
     def optimize_schedule(self, preps, classes_teaching):
-        best_cost = self.get_best_cost()
+        best_schedule = []
+        best_cost = float('inf')
         for i in range(Constants.num_hill_climbs):
             count = self.iterate_schedule(preps, classes_teaching)
             cur_cost = self.evaluate_schedule(count, classes_teaching)
             if cur_cost + Constants.eps < best_cost:
                 best_cost = cur_cost
-                print(f"Found improved schedule at hill-climb iteration {i}: cost = {cur_cost:.10f}")
-                self.print_schedule(cur_cost)
-                self.print_diagnostics(count, classes_teaching)
+                best_schedule = copy.deepcopy(self.schedule)
+                # print(f"Found improved schedule at hill-climb iteration {i}: cost = {cur_cost:.10f}")
+                # self.
+                # (cur_cost)
+                # self.print_diagnostics(count, classes_teaching)
+
+        return best_schedule, best_cost
 
     def print_diagnostics(self, count, classes_teaching):
         spread_score = self.evaluate_spread(count)
@@ -316,18 +325,35 @@ class Scheduler:
                 total += Constants.zero_cost_weight - self.teachers.get(i, self.classes.entry_names[v])
         return total
     
-    def print_schedule(self, cost):
+    def print_schedule(self, next_schedule, cost):
         """
-        Prints the current schedule along with the cost.
-        Writes the schedule to "schedule.txt" and prints it to the console.
+        Saves the top NUM_SCHEDULES schedules and updates top_schedules.json.
         """
-        # Build header: "name,per1,per2,..."
-        # For each teacher, build a row with teacher name and the assignment for each period.
+        # Read existing schedules from file
+        try:
+            with open("top_schedules.json", "r") as f:
+                schedules = json.load(f)
+        except Exception:
+            schedules = []
+
+        # Build schedule data
         headers = ["Name"] + [f"Period {j+1}" for j in range(Constants.NUM_PERIODS)]
-        schedule_with_names = [[self.get_class(entry) for entry in row] for row in self.schedule]
-        output = {"cost": cost, "headers": headers, "schedule": schedule_with_names, "names": self.teachers.entry_names}
-        with open("schedule.json", "w") as f:
-            json.dump(output, f)
+        schedule_with_names = [[self.get_class(entry) for entry in row] for row in next_schedule]
+        new_schedule = {
+            "cost": cost,
+            "headers": headers,
+            "schedule": schedule_with_names,
+            "names": self.teachers.entry_names
+        }
+
+        # Update top schedules if the new schedule is better
+        schedules.append(new_schedule)
+        schedules = sorted(schedules, key=lambda x: x["cost"])[:Constants.NUM_SCHEDULES]
+
+        # Save the updated list
+        with open("top_schedules.json", "w") as f:
+            json.dump(schedules, f)
+
 
     def get_class(self, v):
         """
@@ -479,19 +505,30 @@ class Scheduler:
                 success = True
                 is_teaching = assignments
 
-            self.print_matching(is_teaching)
+            # self.print_matching(is_teaching)
             # Build people_teaching from is_teaching.
             self.people_teaching = [[] for _ in range(self.n)]
             for i in range(self.m):
                 for v in is_teaching[i]:
                     self.people_teaching[v].append(i)
             # Continue with the rest of the scheduling process...
+                    
+            best_schedule = []
+            best_cost = float('inf')
+
             for _ in range(Constants.num_sub_iters):
                 preps = self.assign_preps()
-                self.make_matching(preps, is_teaching)
+                final_schedule, final_cost = self.make_matching(preps, is_teaching)
+                if final_cost + Constants.eps < best_cost:
+                    best_schedule = final_schedule
+                    best_cost = final_cost
+            
+            print(best_cost)
+            cutoff_cost = self.get_best_cost()
+            if best_cost + Constants.eps < cutoff_cost:
+                self.print_schedule(best_schedule, best_cost)
+
             iteration += 1
-            # For demonstration, break after one iteration.
-            # break
 
 def run_scheduler():
     scheduler = Scheduler("classes.csv", "teachers.csv")
