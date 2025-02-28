@@ -78,18 +78,18 @@ class Scheduler:
     # TODO: add some variation
     def make_matching(self, preps, is_teaching):
         sz = 2 + self.m + self.n
-        class_matchings = MCMF(sz + 2, temp=0)
+        class_matchings = MCMF(sz + 2, temp=Constants.max_temp)
         src = sz - 2
         snk = sz - 1
         for i in range(self.m):
             sections = self.teachers.get(i, "sections")
-            class_matchings.add_bounded(src, i, sections, sections, 0, to_fudge=False)
+            class_matchings.add_bounded(src, i, sections, sections, 0)
             for v in is_teaching[i]:
                 cap = 3 if self.classes.get(v, "isCollegePrep") else 4
-                class_matchings.add_bounded(i, self.m + v, 1, cap, 0, to_fudge=False)
+                class_matchings.add_bounded(i, self.m + v, 1, cap, 0)
         for i in range(self.n):
             numSections = self.classes.get(i, "sections")
-            class_matchings.add_bounded(self.m + i, snk, numSections, numSections, 0, to_fudge=False)
+            class_matchings.add_bounded(self.m + i, snk, numSections, numSections, 0)
         feasible, _ = class_matchings.bounded_flow(src, snk)
         if not feasible:
             raise Exception("Class matching flow infeasible.")
@@ -522,8 +522,7 @@ class Scheduler:
                 if final_cost + Constants.eps < best_cost:
                     best_schedule = final_schedule
                     best_cost = final_cost
-            
-            print(best_cost)
+
             cutoff_cost = self.get_best_cost()
             if best_cost + Constants.eps < cutoff_cost:
                 self.print_schedule(best_schedule, best_cost)
