@@ -24,6 +24,22 @@ if schedules:
 else:
     cost, headers, schedule, names = 0, [], [], []
 
+def create_table():
+    # Clear existing widgets in the frame
+    for widget in frame.winfo_children():
+        widget.destroy()
+    global data
+    data = []
+    # Rebuild table based on current headers and names
+    for i in range(len(names) + 1):
+        row_cells = []
+        for j in range(len(headers)):
+            label = tk.Label(frame, text="", borderwidth=1, relief="solid", width=15, height=2)
+            label.grid(row=i, column=j, sticky="nsew")
+            frame.grid_columnconfigure(j, weight=1)
+            row_cells.append(label)
+        data.append(row_cells)
+
 def update_schedule(index):
     """ Updates the display to show the selected schedule. """
     global cost, headers, schedule, names, current_index, schedules
@@ -36,13 +52,24 @@ def update_schedule(index):
 
     if not schedules:
         return
-    current_index = index
+    current_index = (index if index < len(schedules) else len(schedule)-1)
     cost = schedules[current_index]["cost"]
     headers = schedules[current_index]["headers"]
     schedule = schedules[current_index]["schedule"]
     names = schedules[current_index]["names"]
 
-    title_label.config(text=f"Schedule {current_index + 1} - Cost: {cost}")
+    create_table()
+    title_label.config(text=f"Schedule {current_index + 1}")
+
+    global class_base_hues
+    unique_classes = set()
+    for sched in schedules:
+        for row in sched["schedule"]:
+            for cell in row:
+                if cell.strip():
+                    unique_classes.add(cell.strip())
+    unique_classes = sorted(unique_classes)
+    class_base_hues = {cls: i / len(unique_classes) for i, cls in enumerate(unique_classes)}
 
     # Update table contents
     for i, row in enumerate(data):
@@ -78,16 +105,10 @@ def download_csv():
             writer.writerows(table)
 
 # Compute unique class names from non-header cells.
-unique_classes = set()
-for sched in schedules:
-    for row in sched["schedule"]:
-        for cell in row:
-            if cell.strip():
-                unique_classes.add(cell.strip())
-unique_classes = sorted(unique_classes)
+
 
 # Map each class name to a base hue (evenly spaced on the hue wheel).
-class_base_hues = {cls: i / len(unique_classes) for i, cls in enumerate(unique_classes)}
+class_base_hues = {}
 
 def get_dynamic_color_for_class(class_name):
     """ Generates a dynamic color based on the class name. """
@@ -102,7 +123,7 @@ root = tk.Tk()
 root.title("Top 5 Schedules Viewer")
 
 # Title label
-title_label = tk.Label(root, text=f"Schedule {current_index + 1} - Cost: {cost}", font=("Helvetica", 14, "bold"))
+title_label = tk.Label(root, text=(f"Schedule {current_index + 1}" if schedules else "No Schedules Generated Yet"), font=("Helvetica", 14, "bold"))
 title_label.pack(pady=5)
 
 # Create a frame to hold the table.
@@ -131,13 +152,12 @@ button_frame.pack(pady=10)
 
 def prev_schedule():
     """ Show the previous schedule. """
-    if schedules:
-        update_schedule((current_index - 1) % len(schedules))
+    update_schedule((current_index - 1) % len(schedules) if schedules else 0)
 
 def next_schedule():
     """ Show the next schedule. """
-    if schedules:
-        update_schedule((current_index + 1) % len(schedules))
+    print(current_index)
+    update_schedule((current_index + 1) % len(schedules) if schedules else 0)
 
 # Using grid to neatly arrange buttons
 prev_button = tk.Button(button_frame, text="Previous", command=prev_schedule)
